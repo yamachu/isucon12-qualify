@@ -17,4 +17,4 @@ RUN mkdir -p /home/isucon/webapp/node
 WORKDIR /home/isucon/webapp/node
 COPY --chown=isucon:isucon ./ /home/isucon/webapp/node/
 
-CMD [ "bash", "-c", "npm install && npm run serve" ]
+CMD [ "bash", "-c", "npm install && npm run start" ]

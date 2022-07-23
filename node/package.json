@@ -4,6 +4,7 @@
   "description": "ISUPORTS is not e-Sports",
   "main": "index.js",
   "scripts": {
+    "start": "tsc && node src/main.js",
     "serve": "ts-node --transpile-only src/main.ts",
     "lint": "eslint ./src --ext .ts",
     "format": "prettier --write src/"
