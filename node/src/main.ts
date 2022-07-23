@@ -1299,7 +1299,7 @@ app.get(
 
           psds = await tenantDB
             .all<{ title: string; score: number }[]>(
-              `select * from my_player_score mps join competition c on c.id = mps.competition_id where tenant_id = ? AND player_id = ? ORDER BY c.created_at ASC`,
+              `select * from my_player_score mps join competition c on c.id = mps.competition_id where mps.tenant_id = ? AND mps.player_id = ? ORDER BY c.created_at ASC`,
               viewer.tenantId,
               p.id
             )
