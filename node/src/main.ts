@@ -1214,6 +1214,7 @@ app.get(
   })
 )
 
+// TODO: FIX
 // 参加者向けAPI
 // GET /api/player/player/:playerId
 // 参加者の詳細情報を取得する
@@ -1365,31 +1366,34 @@ app.get(
         // player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
         const unlock = await flockByTenantID(tenant.id)
         try {
-          const pss = await tenantDB.all<PlayerScoreRow[]>(
-            'SELECT * FROM my_player_score WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC',
+          const pss = await tenantDB.all<
+            { score: number; row_num: number; player_id: string | null; display_name: string }[]
+          >(
+            `SELECT score, row_num, player_id, p.display_name as display_name
+              FROM my_player_score mpc left join player p on p.id on mpc.player_id WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC`,
             tenant.id,
             competition.id
           )
 
-          const scoredPlayerSet: { [player_id: string]: number } = {}
+          // const scoredPlayerSet: { [player_id: string]: number } = {}
           const tmpRanks: (CompetitionRank & WithRowNum)[] = []
           for (const ps of pss) {
             // player_scoreが同一player_id内ではrow_numの降順でソートされているので
             // 現れたのが2回目以降のplayer_idはより大きいrow_numでスコアが出ているとみなせる
-            if (scoredPlayerSet[ps.player_id]) {
-              continue
-            }
-            scoredPlayerSet[ps.player_id] = 1
-            const p = await retrievePlayer(tenantDB, ps.player_id)
-            if (!p) {
+            // if (scoredPlayerSet[ps.player_id]) {
+            //   continue
+            // }
+            // scoredPlayerSet[ps.player_id] = 1
+            // const p = await retrievePlayer(tenantDB, ps.player_id)
+            if (ps.player_id === null || ps.player_id === undefined) {
               throw new Error('error retrievePlayer')
             }
 
             tmpRanks.push({
               rank: 0,
               score: ps.score,
-              player_id: p.id,
-              player_display_name: p.display_name,
+              player_id: ps.player_id,
+              player_display_name: ps.display_name,
               row_num: ps.row_num,
             })
           }
