@@ -1253,7 +1253,7 @@ app.get(
       }
 
       let pd: PlayerDetail
-      const psds: PlayerScoreDetail[] = []
+      let psds: PlayerScoreDetail[] = [] as PlayerScoreDetail[]
       const tenantDB = await connectToTenantDB(viewer.tenantId)
       try {
         const error = await authorizePlayer(tenantDB, viewer.playerId)
@@ -1281,32 +1281,46 @@ app.get(
         // player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
         const unlock = await flockByTenantID(viewer.tenantId)
         try {
-          for (const comp of competitions) {
-            const ps = await tenantDB.get<PlayerScoreRow>(
-              // 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-              'SELECT * FROM my_player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ?',
+          // for (const comp of competitions) {
+          //   const ps = await tenantDB.get<PlayerScoreRow>(
+          //     // 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
+          //     'SELECT * FROM my_player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ?',
+          //     viewer.tenantId,
+          //     comp.id,
+          //     p.id
+          //   )
+          //   if (!ps) {
+          //     // 行がない = スコアが記録されてない
+          //     continue
+          //   }
+
+          //   pss.push(ps)
+          // }
+
+          psds = await tenantDB
+            .all<{ title: string; score: number }[]>(
+              `select * from my_player_score mps join competition c on c.id = mps.competition_id where tenant_id = ? AND player_id = ? ORDER BY c.created_at ASC`,
               viewer.tenantId,
-              comp.id,
               p.id
             )
-            if (!ps) {
-              // 行がない = スコアが記録されてない
-              continue
-            }
+            .then(
+              (arr): PlayerScoreDetail[] =>
+                arr.map((v) => ({
+                  competition_title: v.title,
+                  score: v.score,
+                })) as any
+            )
 
-            pss.push(ps)
-          }
-
-          for (const ps of pss) {
-            const comp = await retrieveCompetition(tenantDB, ps.competition_id)
-            if (!comp) {
-              throw new Error('error retrieveCompetition')
-            }
-            psds.push({
-              competition_title: comp?.title,
-              score: ps.score,
-            })
-          }
+          // for (const ps of pss) {
+          //   const comp = await retrieveCompetition(tenantDB, ps.competition_id)
+          //   if (!comp) {
+          //     throw new Error('error retrieveCompetition')
+          //   }
+          //   psds.push({
+          //     competition_title: comp?.title,
+          //     score: ps.score,
+          //   })
+          // }
         } finally {
           unlock()
         }
