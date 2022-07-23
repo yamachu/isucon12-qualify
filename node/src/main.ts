@@ -1541,7 +1541,14 @@ app.get(
 async function migrateSQLite3DB() {
   for (const id of [...Array(100)].map((_, i) => i + 1)) {
     const db = await connectToTenantDB(id)
-    // TODO
+    await db.exec(`create index tenant_id_idx on competition(tenant_id);`)
+    await db.exec(`create index tenant_id_created_at_idx on competition(tenant_id, created_at);`)
+
+    await db.exec(
+      `create index tenant_id_competition_id_row_num_idx on player_score(tenant_id, competition_id, row_num);`
+    )
+
+    await db.exec(`create index tenant_id_created_at_idx on player(tenant_id, created_at);`)
   }
 }
 
