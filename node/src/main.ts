@@ -500,6 +500,7 @@ app.post(
       if (error) {
         throw new Error(`error createTenantDB: id=${id} name=${name}, ${error}`)
       }
+      await migrateSQLite3DBImpl(id)
 
       const data: TenantsAddResult = {
         tenant: {
@@ -1539,15 +1540,14 @@ app.get(
   })
 )
 
-async function migrateSQLite3DB() {
-  for (const id of [...Array(100)].map((_, i) => i + 1)) {
-    const db = await connectToTenantDB(id)
-    await db.exec(`create index tenant_id_idx_on_competition on competition(tenant_id);`)
-    await db.exec(`create index tenant_id_created_at_idx_on_competition on competition(tenant_id, created_at);`)
+async function migrateSQLite3DBImpl(id: number) {
+  const db = await connectToTenantDB(id)
+  await db.exec(`create index tenant_id_idx_on_competition on competition(tenant_id);`)
+  await db.exec(`create index tenant_id_created_at_idx_on_competition on competition(tenant_id, created_at);`)
 
-    await db.exec(`create index tenant_id_created_at_idx_on_player on player(tenant_id, created_at);`)
+  await db.exec(`create index tenant_id_created_at_idx_on_player on player(tenant_id, created_at);`)
 
-    await db.exec(`
+  await db.exec(`
     create table my_player_score(
       tenant_id BIGINT NOT NULL,
     player_id VARCHAR(255) NOT NULL,
@@ -1558,9 +1558,14 @@ async function migrateSQLite3DB() {
   );
     `)
 
-    await db.exec(`replace into my_player_score(tenant_id, player_id,competition_id, score,row_num)
+  await db.exec(`replace into my_player_score(tenant_id, player_id,competition_id, score,row_num)
      select  tenant_id, player_id,competition_id, score,row_num from player_score order by row_num asc;
      `)
+}
+
+async function migrateSQLite3DB() {
+  for (const id of [...Array(100)].map((_, i) => i + 1)) {
+    await migrateSQLite3DBImpl(id)
   }
 }
 
