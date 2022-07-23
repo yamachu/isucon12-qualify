@@ -1248,7 +1248,10 @@ app.get(
           is_disqualified: !!p.is_disqualified,
         }
 
-        const competitions = await tenantDB.all<CompetitionRow[]>('SELECT * FROM competition WHERE tenant_id = ? ORDER BY created_at ASC', viewer.tenantId)
+        const competitions = await tenantDB.all<CompetitionRow[]>(
+          'SELECT * FROM competition WHERE tenant_id = ? ORDER BY created_at ASC',
+          viewer.tenantId
+        )
 
         const pss: PlayerScoreRow[] = []
 
@@ -1535,6 +1538,13 @@ app.get(
   })
 )
 
+async function migrateSQLite3DB() {
+  for (const id of [...Array(100)].map((_, i) => i + 1)) {
+    const db = await connectToTenantDB(id)
+    // TODO
+  }
+}
+
 // ベンチマーカー向けAPI
 // POST /initialize
 // ベンチマーカーが起動したときに最初に呼ぶ
@@ -1544,6 +1554,7 @@ app.post(
   wrap(async (req: Request, res: Response, _next: NextFunction) => {
     try {
       await exec(initializeScript)
+      await migrateSQLite3DB()
 
       const data: InitializeResult = {
         lang: 'node',
