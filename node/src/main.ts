@@ -556,7 +556,7 @@ async function billingReportByCompetition(
 
   // ランキングにアクセスした参加者のIDを取得する
   const [vhs] = await adminDB.query<(VisitHistorySummaryRow & RowDataPacket)[]>(
-    'SELECT player_id, created_at AS min_created_at FROM visit_history_min WHERE tenant_id = ? AND competition_id = ? AND ()',
+    'SELECT player_id, created_at AS min_created_at FROM visit_history_min WHERE tenant_id = ? AND competition_id = ?',
     [tenantId, comp.id]
   )
 
