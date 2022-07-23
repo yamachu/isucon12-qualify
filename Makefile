@@ -12,3 +12,9 @@ log_rotate/mysql:
 restart/mysql:
 	sudo systemctl restart mysql
 	/home/isucon/webapp/sql/format.sh
+
+restart/docker:
+	sudo systemctl daemon-reload
+	sudo systemctl restart isuports.service
+
+before/bench: restart/mysql  restart/docker log_rotate/mysql
