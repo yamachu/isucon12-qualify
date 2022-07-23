@@ -387,9 +387,9 @@ async function retrieveTenantRowFromHeader(req: Request): Promise<TenantRow | un
 }
 
 // 参加者を取得する
-async function retrievePlayer(tenantDB: Database, id: string, fromDB?: boolean): Promise<PlayerRow | undefined> {
+async function retrievePlayer(tenantDB: Database, id: string): Promise<PlayerRow | undefined> {
   const p = playerCache.get(id)
-  if (p !== undefined && !!fromDB) {
+  if (p !== undefined) {
     return p
   }
   try {
@@ -555,7 +555,7 @@ async function billingReportByCompetition(
 
   // ランキングにアクセスした参加者のIDを取得する
   const [vhs] = await adminDB.query<(VisitHistorySummaryRow & RowDataPacket)[]>(
-    'SELECT player_id, created_at AS min_created_at FROM visit_history_min WHERE tenant_id = ? AND competition_id = ? AND finished_at not null',
+    'SELECT player_id, created_at AS min_created_at FROM visit_history_min WHERE tenant_id = ? AND competition_id = ?',
     [tenantId, comp.id]
   )
 
@@ -846,7 +846,7 @@ app.post(
           throw new Error(`error Update player: isDisqualified=true, updatedAt=${now}, id=${playerId}, ${error}`)
         }
 
-        const player = await retrievePlayer(tenantDB, playerId, true)
+        const player = await retrievePlayer(tenantDB, playerId)
         if (!player) {
           // 存在しないプレイヤー
           throw new ErrorWithStatus(404, 'player not found')
@@ -858,6 +858,7 @@ app.post(
         }
         playerCache.set(player.id, {
           ...player,
+          is_disqualified: 1,
         })
       } catch (error: any) {
         if (error.status) {
@@ -1131,7 +1132,6 @@ app.post(
   })
 )
 
-// TODO
 // テナント管理者向けAPI
 // GET /api/organizer/billing
 // テナント内の課金レポートを取得する
