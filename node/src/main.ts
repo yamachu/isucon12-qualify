@@ -1077,6 +1077,13 @@ app.post(
             })
           }
           const _map = playerScoreRows.reduce((prev, next) => prev.set(next.player_id, next), new Map())
+          for (const row of [..._map.values()]) {
+            const p = await retrievePlayer(tenantDB, row.player_id)
+            if (!p) {
+              // 存在しない参加者が含まれている
+              throw new ErrorWithStatus(400, `player not found: ${row.player_id}`)
+            }
+          }
 
           await tenantDB.run(
             'DELETE FROM my_player_score WHERE tenant_id = ? AND competition_id = ?',
