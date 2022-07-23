@@ -12,7 +12,7 @@ log_rotate/mysql:
 	cd /home/isucon; mysqladmin flush-logs
 
 log_rotate/sqlite:
-	mkdir /home/isucon/log/old/sqlite/${DATE}
+	mkdir -p /home/isucon/log/old/sqlite/${DATE}
 	mv /home/isucon/log/sqlite/* /home/isucon/log/old/sqlite/${DATE}/
 
 restart/mysql:
