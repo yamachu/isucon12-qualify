@@ -1370,7 +1370,7 @@ app.get(
             { score: number; row_num: number; player_id: string | null; display_name: string }[]
           >(
             `SELECT score, row_num, player_id, p.display_name as display_name
-              FROM my_player_score mpc left join player p on p.id = mpc.player_id WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC`,
+              FROM my_player_score mpc left join player p on p.id = mpc.player_id WHERE mpc.tenant_id = ? AND competition_id = ? ORDER BY row_num DESC`,
             tenant.id,
             competition.id
           )
