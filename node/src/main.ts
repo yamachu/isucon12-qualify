@@ -1051,11 +1051,11 @@ app.post(
             }
 
             const { player_id, score: scoreStr } = record
-            const p = await retrievePlayer(tenantDB, player_id)
-            if (!p) {
-              // 存在しない参加者が含まれている
-              throw new ErrorWithStatus(400, `player not found: ${player_id}`)
-            }
+            // const p = await retrievePlayer(tenantDB, player_id)
+            // if (!p) {
+            //   // 存在しない参加者が含まれている
+            //   throw new ErrorWithStatus(400, `player not found: ${player_id}`)
+            // }
 
             const score = parseInt(scoreStr, 10)
             if (isNaN(score)) {
@@ -1076,6 +1076,7 @@ app.post(
               // updated_at: now,
             })
           }
+          const _map = playerScoreRows.reduce((prev, next) => prev.set(next.player_id, next), new Map())
 
           await tenantDB.run(
             'DELETE FROM my_player_score WHERE tenant_id = ? AND competition_id = ?',
@@ -1083,9 +1084,9 @@ app.post(
             competitionId
           )
 
-          for (const row of playerScoreRows) {
+          for (const row of [..._map.values()]) {
             await tenantDB.run(
-              'replace INTO my_player_score (tenant_id, player_id, competition_id, score, row_num) VALUES ($tenant_id, $player_id, $competition_id, $score, $row_num)',
+              'INSERT INTO my_player_score (tenant_id, player_id, competition_id, score, row_num) VALUES ($tenant_id, $player_id, $competition_id, $score, $row_num)',
               {
                 // $id: row.id,
                 $tenant_id: row.tenant_id,
