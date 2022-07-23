@@ -1,6 +1,7 @@
 create index player_id_idx on visit_history(player_id);
 create index tenant_id_competition_id_idx on visit_history(tenant_id,competition_id);
 
+DROP TABLE IF EXISTS `visit_history_min`;
 CREATE TABLE `visit_history_min` (
   `player_id` VARCHAR(255) NOT NULL,
   `tenant_id` BIGINT UNSIGNED NOT NULL,
