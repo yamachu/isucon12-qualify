@@ -264,13 +264,13 @@ interface PlayerRow {
 
 interface PlayerScoreRow {
   tenant_id: number
-  id: string
+  // id: string
   player_id: string
   competition_id: string
   score: number
   row_num: number
-  created_at: number
-  updated_at: number
+  // created_at: number
+  // updated_at: number
 }
 
 const app = express()
@@ -561,7 +561,7 @@ async function billingReportByCompetition(
   try {
     // スコアを登録した参加者のIDを取得する
     const scoredPlayerIds = await tenantDB.all<{ player_id: string }[]>(
-      'SELECT DISTINCT(player_id) FROM player_score WHERE tenant_id = ? AND competition_id = ?',
+      'SELECT player_id FROM my_player_score WHERE tenant_id = ? AND competition_id = ?',
       tenantId,
       comp.id
     )
@@ -1029,6 +1029,7 @@ app.post(
         const unlock = await flockByTenantID(viewer.tenantId)
         let rowNum = 0
         try {
+          // FIXME: Performance優先で、ここでgroupByして最後のやつを取得でも良い
           for (const record of records) {
             rowNum++
             const keys = Object.keys(record)
@@ -1048,39 +1049,39 @@ app.post(
               throw new ErrorWithStatus(400, `error parseInt: scoreStr=${scoreStr}`)
             }
 
-            const id = await dispenseID()
-            const now = Math.floor(new Date().getTime() / 1000)
+            // const id = await dispenseID()
+            // const now = Math.floor(new Date().getTime() / 1000)
 
             playerScoreRows.push({
-              id,
+              // id,
               tenant_id: viewer.tenantId,
               player_id,
               competition_id: competitionId,
               score: score,
               row_num: rowNum,
-              created_at: now,
-              updated_at: now,
+              // created_at: now,
+              // updated_at: now,
             })
           }
 
           await tenantDB.run(
-            'DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ?',
+            'DELETE FROM my_player_score WHERE tenant_id = ? AND competition_id = ?',
             viewer.tenantId,
             competitionId
           )
 
           for (const row of playerScoreRows) {
             await tenantDB.run(
-              'INSERT INTO player_score (id, tenant_id, player_id, competition_id, score, row_num, created_at, updated_at) VALUES ($id, $tenant_id, $player_id, $competition_id, $score, $row_num, $created_at, $updated_at)',
+              'replace INTO my_player_score (tenant_id, player_id, competition_id, score, row_num) VALUES ($tenant_id, $player_id, $competition_id, $score, $row_num)',
               {
-                $id: row.id,
+                // $id: row.id,
                 $tenant_id: row.tenant_id,
                 $player_id: row.player_id,
                 $competition_id: row.competition_id,
                 $score: row.score,
                 $row_num: row.row_num,
-                $created_at: row.created_at,
-                $updated_at: row.updated_at,
+                // $created_at: row.created_at,
+                // $updated_at: row.updated_at,
               }
             )
           }
@@ -1261,7 +1262,7 @@ app.get(
           for (const comp of competitions) {
             const ps = await tenantDB.get<PlayerScoreRow>(
               // 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-              'SELECT * FROM player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ? ORDER BY row_num DESC LIMIT 1',
+              'SELECT * FROM my_player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ?',
               viewer.tenantId,
               comp.id,
               p.id
@@ -1364,7 +1365,7 @@ app.get(
         const unlock = await flockByTenantID(tenant.id)
         try {
           const pss = await tenantDB.all<PlayerScoreRow[]>(
-            'SELECT * FROM player_score WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC',
+            'SELECT * FROM my_player_score WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC',
             tenant.id,
             competition.id
           )
@@ -1544,11 +1545,22 @@ async function migrateSQLite3DB() {
     await db.exec(`create index tenant_id_idx_on_competition on competition(tenant_id);`)
     await db.exec(`create index tenant_id_created_at_idx_on_competition on competition(tenant_id, created_at);`)
 
-    await db.exec(
-      `create index tenant_id_competition_id_row_num_idx_on_player_score on player_score(tenant_id, competition_id, row_num);`
-    )
-
     await db.exec(`create index tenant_id_created_at_idx_on_player on player(tenant_id, created_at);`)
+
+    await db.exec(`
+    create table my_player_score(
+      tenant_id BIGINT NOT NULL,
+    player_id VARCHAR(255) NOT NULL,
+    competition_id VARCHAR(255) NOT NULL,
+    score BIGINT NOT NULL,
+    row_num BIGINT NOT NULL,
+    unique(player_id, tenant_id, competition_id)
+  );
+    `)
+
+    await db.exec(`replace into my_player_score(tenant_id, player_id,competition_id, score,row_num)
+     select  tenant_id, player_id,competition_id, score,row_num from player_score order by row_num asc;
+     `)
   }
 }
 
