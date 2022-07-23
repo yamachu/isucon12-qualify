@@ -11,3 +11,4 @@ log_rotate/mysql:
 
 restart/mysql:
 	sudo systemctl restart mysql
+	/home/isucon/webapp/sql/format.sh
