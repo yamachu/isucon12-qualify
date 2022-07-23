@@ -31,6 +31,10 @@ const RoleNone = 'none'
 
 const tenantNameRegexp = /^[a-z][a-z0-9-]{0,61}[a-z0-9]$/
 
+type PlayerId = string
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const playerCache: Map<PlayerId, PlayerRow> = new Map()
+
 // 環境変数を取得する、なければデフォルト値を返す
 function getEnv(key: string, defaultValue: string): string {
   const val = process.env[key]
@@ -384,8 +388,15 @@ async function retrieveTenantRowFromHeader(req: Request): Promise<TenantRow | un
 
 // 参加者を取得する
 async function retrievePlayer(tenantDB: Database, id: string): Promise<PlayerRow | undefined> {
+  const p = playerCache.get(id)
+  if (p !== undefined) {
+    return p
+  }
   try {
     const playerRow = await tenantDB.get<PlayerRow>('SELECT * FROM player WHERE id = ?', id)
+    if (playerRow !== undefined) {
+      playerCache.set(id, playerRow)
+    }
     return playerRow
   } catch (error) {
     throw new Error(`error Select player: id=${id}, ${error}`)
@@ -807,6 +818,7 @@ app.post(
   })
 )
 
+// NOTE: delayでも良い
 // テナント管理者向けAPI
 // POST /api/organizer/player/:player_id/disqualified
 // 参加者を失格にする
@@ -844,6 +856,10 @@ app.post(
           display_name: player.display_name,
           is_disqualified: !!player.is_disqualified,
         }
+        playerCache.set(player.id, {
+          ...player,
+          is_disqualified: 1,
+        })
       } catch (error: any) {
         if (error.status) {
           throw error // rethrow
@@ -926,6 +942,7 @@ app.post(
   })
 )
 
+// NOTE: delayでも良い
 // テナント管理者向けAPI
 // POST /api/organizer/competition/:competition_id/finish
 // 大会を終了する
@@ -1583,6 +1600,7 @@ app.post(
     try {
       await exec(initializeScript)
       await migrateSQLite3DB()
+      playerCache.clear()
 
       const data: InitializeResult = {
         lang: 'node',
